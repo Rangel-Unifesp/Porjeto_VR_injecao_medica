@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Hospital VR com WebSocket</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+</head>
+
+<body>
+    <a-scene>
+        <a-assets>
+            <a-asset-item id="hospital" src="kidman_room.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Modelo do cenário hospitalar -->
+        <a-entity gltf-model="#hospital" position="0 0 0" scale="1 1 1" rotation="0 180 0">
+        </a-entity>
+        <a-assets>
+            <a-asset-item id="corpo" src="free_male_body-low_poly_fre.glb"></a-asset-item>
+        </a-assets>
+
+        <a-entity gltf-model="#corpo"
+          animation-mixer
+          position="1.7 0.9 -0.2"
+          rotation="-90 0 0"
+          scale="1 1 1">
+        </a-entity>
+
+
+        <!-- Câmera -->
+        <a-entity camera look-controls wasd-controls position="0 1.6 -1"></a-entity>
+
+    </a-scene>
+    <script>simulacao.js</script>
+</body>
+
+</html>

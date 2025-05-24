@@ -1,0 +1,71 @@
+.carousel-item {
+    max-height: 80vh;
+    background-color: rgb(235, 235, 205);
+}
+
+.carousel-item img {
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.navbar-brand {
+    color: rgb(255, 102, 0)
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 20px;
+    background-color: #f8f8f8;
+}
+
+.Texto_sobre_o_projeto {
+    max-width: 800px;
+    text-align: center;
+    padding: 20px;
+    background-color: rgb(9, 16, 94);
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgb(255, 255, 255);
+}
+
+.Texto_sobre_o_projeto h1,
+.Texto_sobre_o_projeto h3,
+.Texto_sobre_o_projeto h4 {
+    color: beige;
+}
+
+.card {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    /* espaço entre os cards */
+    flex-wrap: wrap;
+    /* empilha em telas menores */
+    margin-top: 20px;
+}
+
+.container.row {
+    display : felx;
+    justify-content: center;
+    text-align: center;
+    border-radius: 12px;
+    margin-top : 20px;
+}
+
+.fa-solid.fa-laptop {
+    margin-top : 20px;
+    display : felx;
+    justify-content: center;
+    text-align: center;
+    font-size: 20vh;
+}
+
+.fa-solid.fa-mobile-screen {
+    margin-top : 20px;
+    display : felx;
+    justify-content: center;
+    text-align: center;
+    font-size: 20vh;
+}
