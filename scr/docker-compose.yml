@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./backend:/app
+
+  frontend-vr:
+    image: nginx:alpine
+    volumes:
+      - ./frontend-vr:/usr/share/nginx/html
+    ports:
+      - "8080:80"
+
+  mosquitto:
+    image: eclipse-mosquitto
+    ports:
+      - "1883:1883"
+
+  sofa:
+    build:
+      context: ./simulation
+      dockerfile: Dockerfile.sofa
+    volumes:
+      - ./simulation:/home/sofa
