@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecionamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .button-container {
+            display: flex;
+            gap: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Escolha uma opção:</h1>
+    <div class="button-container">
+        <button onclick="redirecionar('computador')">Computador</button>
+        <button onclick="redirecionar('celular')">Celular</button>
+    </div>
+
+    <script>
+        function redirecionar(destino) {
+            if (destino === 'computador') {
+                window.location.href = 'Computador.HTML'; 
+            } else if (destino === 'celular') {
+                window.location.href = 'Interação3d.HTML'; 
+            }
+        }
+    </script>
+</body>
+</html>
