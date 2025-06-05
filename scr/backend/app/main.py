@@ -2,6 +2,11 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 import paho.mqtt.client as mqtt
 
+# Import handlers and bridge functions
+from .mqtt_handler import handle_mqtt_message, send_mqtt_command
+from .ws_handler import handle_websocket_message, send_update_to_websocket
+# from .sofa_bridge import send_command_to_sofa, get_data_from_sofa # Placeholder for future use
+
 app = FastAPI()
 
 # MQTT Broker config
@@ -20,7 +25,8 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     message = msg.payload.decode()
-    print(f"Mensagem MQTT recebida: {message}")
+    # print(f"Mensagem MQTT recebida: {message}") # Original print
+    handle_mqtt_message(msg.topic, message) # Call the new handler
     # Enviar mensagem para todos websockets conectados
     asyncio.run(send_message_to_clients(message))
 
@@ -55,8 +61,10 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            print(f"Mensagem recebida do frontend: {data}")
+            # print(f"Mensagem recebida do frontend: {data}") # Original print
+            handle_websocket_message(data, websocket) # Call the new handler
             # Aqui você pode encaminhar comandos para o SOFA ou ESP32
+            # Example: send_update_to_websocket(websocket, {"response_from_server": "got it: " + data})
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
         print("Cliente desconectado")
