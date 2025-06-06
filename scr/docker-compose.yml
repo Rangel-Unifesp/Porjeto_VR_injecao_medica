@@ -1,15 +1,23 @@
+version: '3.8'
+
 services:
   backend:
     build: ./backend
+    container_name: backend_server
     ports:
       - "8000:8000"
-    depends_on:
-      - mosquitto
     volumes:
+
       - ./backend:/app
+    environment:
+      - MQTT_BROKER=mosquitto
+    depends_on:
+      - mosquitto 
+
 
   frontend-vr:
     image: nginx:alpine
+    container_name: frontend_server
     volumes:
       - ./frontend-vr:/usr/share/nginx/html
     ports:
@@ -17,12 +25,21 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto
+    container_name: mqtt_broker
     ports:
       - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
 
   sofa:
     build:
       context: ./simulation
       dockerfile: Dockerfile.sofa
+    container_name: sofa_simulator
     volumes:
-      - ./simulation:/home/sofa
+      - ./simulation:/home/sofa 
+    environment:
+      - MQTT_BROKER=mosquitto
+    depends_on:
+      - mosquitto

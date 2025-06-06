@@ -1,0 +1,11 @@
+FROM sofaframework/sofa:v24.06
+
+WORKDIR /app
+
+RUN python3 -m pip install paho-mqtt
+
+COPY injecao.py .
+COPY sofa_bridge.py .
+COPY mesh/ ./mesh/
+
+CMD ["runSofa", "-l", "SofaPython3", "-g", "batch", "sofa_bridge.py"]
