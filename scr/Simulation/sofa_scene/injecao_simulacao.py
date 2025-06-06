@@ -1,15 +1,34 @@
-class InjectionSimulation:
-    def __init__(self):
-        print("InjectionSimulation initialized")
+# scr/Simulation/sofa_scene/injecao_simulacao.py
+# Placeholder para a cena de simulação de injeção no SOFA.
 
-    def start_injection(self):
-        print("Starting injection...")
-        pass
+def createScene(rootNode):
+    """
+    Esta função seria responsável por construir a cena SOFA.
+    Incluiria:
+    - Modelos de tecido mole
+    - Modelo da agulha
+    - Interações físicas (colisão, deformação, forças de reação)
+    - Mecanismos de controle para a agulha
+    """
+    print("[SOFA Scene] createScene chamada (simulação).")
+    rootNode.setName("RaizDaCenaInjecao")
 
-    def stop_injection(self):
-        print("Stopping injection...")
-        pass
+    # Exemplo muito simplificado de um nó:
+    # tecido = rootNode.createChild('TecidoMole')
+    # tecido.addObject('MechanicalObject', template='Vec3d', position='0 0 0 1 0 0') # etc.
 
-    def get_simulation_data(self):
-        print("Getting simulation data...")
-        return {} # Returning an empty dict as a placeholder
+    print("[SOFA Scene] Placeholder da cena criada.")
+    return rootNode
+
+# Esta parte normalmente não é executada diretamente se o SOFA é controlado por outro script.
+# No entanto, pode ser útil para testes diretos da cena com runSofa.
+if __name__ == '__main__':
+    print("Este script define uma cena SOFA e normalmente é carregado pelo SOFA ou por um script de controle.")
+    # import Sofa
+    # root = Sofa.Core.Node("root")
+    # createScene(root)
+    # Sofa.Gui.GUIManager.Init("myscene", "qglviewer")
+    # Sofa.Gui.GUIManager.createGUI(root, __file__)
+    # Sofa.Gui.GUIManager.SetDimension(1080, 1080)
+    # Sofa.Gui.GUIManager.MainLoop(root)
+    # Sofa.Gui.GUIManager.closeGUI()

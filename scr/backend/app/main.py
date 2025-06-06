@@ -1,7 +1,12 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+# scr/backend/app/main.py
+from fastapi import FastAPI
 import asyncio
-import paho.mqtt.client as mqtt
 
+# Importar os handlers e outros módulos necessários
+from .ws_handler import router as websocket_router
+from .mqtt_handler import init_mqtt, mqtt_client # Importa o cliente MQTT e a função de inicialização
+# from .sofa_bridge import ... # Se necessário no futuro diretamente em main
+=======
 # Import handlers and bridge functions
 from .mqtt_handler import handle_mqtt_message, send_mqtt_command
 from .ws_handler import handle_websocket_message, send_update_to_websocket
@@ -9,16 +14,33 @@ from .ws_handler import handle_websocket_message, send_update_to_websocket
 
 app = FastAPI()
 
-# MQTT Broker config
-MQTT_BROKER = "localhost"
-MQTT_PORT = 1883
-MQTT_TOPIC = "simulador/esp32"
+@app.on_event("startup")
+async def startup_event():
+    print("Iniciando aplicação FastAPI...")
+    # Iniciar o loop do cliente MQTT em um thread separado
+    # Isso é crucial para que ele não bloqueie o loop de eventos do FastAPI/Uvicorn
+    try:
+        mqtt_client.loop_start()
+        print("Loop do cliente MQTT iniciado.")
+    except Exception as e:
+        print(f"Erro ao iniciar o loop do cliente MQTT: {e}")
+        # Considerar logar este erro ou tratá-lo de forma mais robusta
 
-# Global set para WebSockets conectados
-connected_websockets = set()
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Encerrando aplicação FastAPI...")
+    # Parar o loop do cliente MQTT
+    try:
+        mqtt_client.loop_stop()
+        print("Loop do cliente MQTT parado.")
+    except Exception as e:
+        print(f"Erro ao parar o loop do cliente MQTT: {e}")
+    # Outras limpezas, se necessário
 
-# Funções MQTT ---------------------------------------------------
-
+@app.get("/")
+async def root():
+    return {"message": "Backend do Simulador Háptico Modularizado Ativo"}
+=======
 def on_connect(client, userdata, flags, rc):
     print(f"Conectado ao MQTT Broker com código {rc}")
     client.subscribe(MQTT_TOPIC)
@@ -68,6 +90,3 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         connected_websockets.remove(websocket)
         print("Cliente desconectado")
-
-# Rodar o backend:
-# uvicorn main:app --host 0.0.0.0 --port 8000
