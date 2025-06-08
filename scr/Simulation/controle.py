@@ -1,85 +1,103 @@
-# scr/Simulation/controle.py
-# Placeholder para o script de controle da simulação SOFA.
-# Este script carregaria a cena SOFA e forneceria uma interface
-# (e.g., um servidor de socket simples) para o backend (sofa_bridge.py) se comunicar.
-
-import time
+import paho.mqtt.client as mqtt
 import json
+import time
+import threading
 
-# Simulação de um "servidor" SOFA muito básico
-# Em um cenário real, isso poderia ser um servidor RPC, ZMQ, ou similar.
 
-def load_sofa_scene():
-    """
-    Simula o carregamento da cena SOFA.
-    Em um sistema real, isso inicializaria o SOFA e carregaria a cena definida
-    em injecao_simulação.py. (Nome do arquivo Python pode precisar de ajuste para ASCII)
-    """
-    print("[Controle SOFA] Carregando cena SOFA (simulado)...")
-    from sofa_scene import injecao_simulacao # Corrigido para nome de arquivo ASCII
-    # root_node = # ... código para inicializar SOFA e chamar injecao_simulacao.createScene ...
-    print("[Controle SOFA] Cena SOFA carregada (simulado).")
-    return True # Retorna True se o carregamento (simulado) for bem-sucedido
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
 
-def process_command_from_backend(command_data):
-    """
-    Simula o processamento de um comando vindo do backend (sofa_bridge.py).
-    """
-    action = command_data.get("action")
-    print(f"[Controle SOFA] Comando recebido do backend: {action}, Dados: {command_data}")
 
-    if action == "injetar":
-        # Lógica de simulação da injeção no SOFA
-        # Isso envolveria interagir com os componentes da cena SOFA.
-        print("[Controle SOFA] Simulando interacao de injecao na cena SOFA...")
-        time.sleep(0.1) # Simula processamento
-        # Retorna uma força de reação simulada
-        return {"status": "success", "force_feedback": 0.65, "message": "Injecao processada em SOFA (simulado)"}
+TOPIC_SOFA_COMMANDS = "simulador/sofa/comandos"
 
-    elif action == "mover_mao":
-        print("[Controle SOFA] Simulando movimento da mao na cena SOFA...")
-        time.sleep(0.05)
-        return {"status": "success", "message": "Mao movida em SOFA (simulado)"}
+TOPIC_SOFA_RESULTS = "simulador/sofa/resultados"
 
-    elif action == "pegar_seringa" or action == "soltar_seringa":
-        print(f"[Controle SOFA] Simulando '{action}' na cena SOFA...")
-        time.sleep(0.05)
-        return {"status": "success", "message": f"'{action}' processado em SOFA (simulado)"}
+last_force_feedback = [0, 0, 0]
+last_needle_position = [0, 0, 0]
+connected = threading.Event() 
 
-    return {"status": "unknown_command", "message": "Comando nao reconhecido pelo SOFA (simulado)"}
+def on_connect(client, userdata, flags, rc):
+    """Callback para quando nos conectamos ao broker."""
+    if rc == 0:
+        print("[Controle] Conectado ao MQTT Broker com sucesso!")
+        client.subscribe(TOPIC_SOFA_RESULTS)
+        print(f"[Controle] Inscrito no tópico de resultados: {TOPIC_SOFA_RESULTS}")
+        connected.set() 
+    else:
+        print(f"[Controle] Falha ao conectar, código de retorno: {rc}")
+        connected.clear()
 
-def start_simulation_server():
-    """
-    Simula um loop de servidor que escuta por "conexões" ou "mensagens".
-    O sofa_bridge.py se conectaria a este servidor.
-    Para este placeholder, vamos apenas simular o recebimento de um comando.
-    """
-    print("[Controle SOFA] Servidor de simulação iniciado (simulado).")
-    print("[Controle SOFA] Aguardando comandos do backend (simulado)...")
+def on_message(client, userdata, msg):
+    """Callback para quando recebemos uma mensagem do broker."""
+    global last_force_feedback, last_needle_position
+    try:
+        data = json.loads(msg.payload.decode())
+        if "force_feedback" in data and "needle_tip_position" in data:
+            last_force_feedback = data["force_feedback"]
+            last_needle_position = data["needle_tip_position"]
+            ff_x = f"{last_force_feedback[0]:.2f}".rjust(8)
+            ff_y = f"{last_force_feedback[1]:.2f}".rjust(8)
+            ff_z = f"{last_force_feedback[2]:.2f}".rjust(8)
+            pos_y = f"{last_needle_position[1]:.2f}".rjust(6)
+            print(f"Posição da Ponta (Y): {pos_y} mm | Força (X, Y, Z): [{ff_x}, {ff_y}, {ff_z}] N\r", end="")
 
-    # Exemplo de como o sofa_bridge.py poderia interagir:
-    # Esta é uma simulação grosseira. Em um caso real, seria um loop de socket/RPC.
+    except (json.JSONDecodeError, KeyError):
+        pass
 
-    # Comando de exemplo que o sofa_bridge.py poderia enviar
-    example_command_from_bridge = {"action": "injetar", "depth": 10, "speed": 2}
-
-    print(f"[Controle SOFA] Recebendo comando de exemplo: {example_command_from_bridge}")
-    response = process_command_from_backend(example_command_from_bridge)
-    print(f"[Controle SOFA] Resposta para o backend: {response}")
-
-    # Em um servidor real, ele continuaria escutando.
-    # while True:
-    #     # Lógica de escuta de socket/RPC
-    #     received_data = # ... esperar por dados ...
-    #     if received_data:
-    #         command = json.loads(received_data)
-    #         response = process_command_from_backend(command)
-    #         # ... enviar response de volta ...
-    #     time.sleep(0.01)
+def publish_needle_position(client, y_pos):
+    
+    new_position = [0, 60, 0,  
+                    0, float(y_pos), 0] 
+    
+    payload = {
+        "command": "move_needle",
+        "value": new_position
+    }
+    
+    client.publish(TOPIC_SOFA_COMMANDS, json.dumps(payload))
+    print("\n[Controle] Comando 'move_needle' enviado.")
 
 
 if __name__ == "__main__":
-    if load_sofa_scene():
-        start_simulation_server()
-    else:
-        print("[Controle SOFA] Falha ao carregar a cena SOFA.")
+    
+    client = mqtt.Client("control_client")
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()
+
+    print("[Controle] Aguardando conexão com o broker...")
+    connected.wait(timeout=5) 
+
+    if not connected.is_set():
+        print("[Controle] Não foi possível conectar ao broker. Encerrando.")
+        client.loop_stop()
+        exit()
+
+    print("\n--- Controle Remoto do Simulador ---")
+    print("Mova a ponta da agulha no eixo Y.")
+    print("Digite um valor numérico (ex: 45.5) e pressione Enter.")
+    print("Digite 'sair' para encerrar.")
+    print("-" * 35)
+
+    try:
+        
+        publish_needle_position(client, 50)
+        
+        while True:
+            command = input("\nNova posição Y para a ponta da agulha: ")
+            if command.lower() == 'sair':
+                break
+            try:
+                y_position = float(command)
+                publish_needle_position(client, y_position)
+            except ValueError:
+                print("[Controle] Erro: Por favor, insira um valor numérico válido.")
+
+    except KeyboardInterrupt:
+        print("\n[Controle] Encerrando por solicitação do usuário.")
+    finally:
+        client.loop_stop()
+        client.disconnect()
+        print("[Controle] Desconectado e encerrado.")

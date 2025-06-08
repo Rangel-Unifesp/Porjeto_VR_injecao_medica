@@ -1,33 +1,12 @@
-# Dockerfile para SOFA Framework
-# Este Dockerfile é um placeholder e precisa ser configurado corretamente
-# para instalar a versão desejada do SOFA e suas dependências.
-# Consulte a documentação oficial do SOFA para instruções de instalação.
+FROM sofaframework/sofa:v24.06
 
-# Exemplo (MUITO simplificado, provavelmente não funcional):
-# FROM ubuntu:20.04
-#
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     cmake \
-#     gcc \
-#     g++ \
-#     libqt5widgets5 \
-#     # ... muitas outras dependências do SOFA ...
-#     && rm -rf /var/lib/apt/lists/*
-#
-# WORKDIR /opt
-# RUN git clone --recursive https://github.com/sofa-framework/sofa.git sofa_src
-# WORKDIR /opt/sofa_src/build
-# RUN cmake .. -DCMAKE_BUILD_TYPE=Release # Adicionar flags de compilação do SOFA aqui
-# RUN make -j$(nproc)
-# RUN make install
-#
-# WORKDIR /app
-# COPY ./sofa_scene /app/sofa_scene
-# COPY ./controle.py /app/controle.py
-#
-# CMD ["python3", "/app/controle.py"]
+WORKDIR /app
 
-# NOTA: A configuração acima é apenas ilustrativa.
-# Uma instalação real do SOFA é significativamente mais complexa.
-# Recomenda-se usar uma imagem Docker oficial do SOFA se disponível,
-# ou seguir guias detalhados de compilação.
+RUN python3 -m pip install paho-mqtt
+
+COPY injecao.py .
+COPY sofa_bridge.py .
+COPY mesh/ ./mesh/
+
+CMD ["runSofa", "-l", "SofaPython3", "-g", "batch", "sofa_bridge.py"]
+
