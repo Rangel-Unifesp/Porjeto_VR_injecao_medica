@@ -9,3 +9,4 @@ COPY sofa_bridge.py .
 COPY mesh/ ./mesh/
 
 CMD ["runSofa", "-l", "SofaPython3", "-g", "batch", "sofa_bridge.py"]
+

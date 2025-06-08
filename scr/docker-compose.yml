@@ -19,7 +19,7 @@ services:
     image: nginx:alpine
     container_name: frontend_server
     volumes:
-      - ./frontend-vr:/usr/share/nginx/html
+      - ./frontend:/usr/share/nginx/html
     ports:
       - "8080:80"
 

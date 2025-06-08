@@ -59,3 +59,4 @@ class MQTTHandler:
             print(f"MQTT Handler: Mensagem '{payload}' enviada para o tópico '{topic}'")
         else:
             print(f"MQTT Handler: Falha ao enviar mensagem para o tópico '{topic}'")
+
