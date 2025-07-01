@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 import paho.mqtt.client as mqtt
 from contextlib import asynccontextmanager
@@ -20,10 +20,7 @@ mqtt_queue = asyncio.Queue()
 connected_websockets = set()
 
 # --- Funções do Cliente MQTT ---
-@app.get("/")
-async def root():
-    return {"message": "Backend do Simulador Háptico Modularizado Ativo"}
-=======
+
 def on_connect(client, userdata, flags, rc):
     """Callback executado quando o cliente se conecta ao broker."""
     if rc == 0:

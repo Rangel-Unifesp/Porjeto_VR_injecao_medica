@@ -12,7 +12,8 @@ except ImportError:
     exit()
 
 # ### ALTERADO ###: Importa a função que cria a cena do nosso novo arquivo
-from injecao import create_injection_scene
+from Simulation.sofa_scene.injecao_simulação import create_injection_scene
+
 
 
 # --- Configurações do MQTT (sem alterações) ---
