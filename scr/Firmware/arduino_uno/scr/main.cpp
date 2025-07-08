@@ -13,6 +13,7 @@ const int PIN_FSR = A0;       // Pino analógico
 
 // Pinos do Encoder do Motor
 const int PIN_ENCODER_A = 2;  // Deve ser um pino de interrupção (2 ou 3 no Uno/Nano)
+const int PIN_ENCODER_B = 3;  // O outro pino de interrupção para determinar a direção
 
 // --- Variáveis Globais ---
 // 'volatile' é essencial para variáveis modificadas dentro de uma interrupção.
@@ -54,11 +55,18 @@ void requestEvent() {
 }
 
 // --- Função de Interrupção do Encoder ---
-// Chamada a cada pulso do encoder no pino A.
+// Chamada a cada pulso de subida no pino A do encoder.
 void updateEncoder() {
-  // Lógica simples para contar pulsos. Pode ser melhorada para ler direção
-  // se o pino B do encoder também for conectado a uma interrupção.
-  encoderCount++;
+  // A leitura do pino B dentro da interrupção do pino A nos permite determinar a direção.
+  // Se o pino B estiver em nível baixo quando o A sobe, a rotação é em um sentido.
+  // Se estiver em nível alto, é no sentido oposto.
+  // A direção exata (horário/anti-horário) depende da fiação e pode ser invertida
+  // trocando encoderCount++ por encoderCount--.
+  if (digitalRead(PIN_ENCODER_B) == LOW) {
+    encoderCount++; // Assumindo rotação em um sentido
+  } else {
+    encoderCount--; // Rotação no sentido oposto
+  }
 }
 
 // --- Função para controlar o motor ---
@@ -93,6 +101,7 @@ void setup() {
 
   // Configura a interrupção para o encoder
   pinMode(PIN_ENCODER_A, INPUT_PULLUP);
+  pinMode(PIN_ENCODER_B, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), updateEncoder, RISING);
 
   // Inicia o I2C como escravo
