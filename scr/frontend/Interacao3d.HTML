@@ -40,7 +40,34 @@
         <a-entity camera look-controls wasd-controls position="0 1.6 -1"></a-entity>
 
     </a-scene>
-    <script src="js/simulacao.js"></script>
+    <!-- Inclui a biblioteca cliente do Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <script>
+        // Conecta ao servidor backend via WebSocket
+        // Use 'http://localhost:5000' se estiver rodando tudo na mesma máquina.
+        // Se o backend estiver em outra máquina na rede, use o IP dela.
+        const socket = io('http://localhost:5000');
+
+        socket.on('connect', () => {
+            console.log('Conectado ao servidor backend via WebSocket!');
+        });
+
+        // Ouve pelo evento 'update_scene' enviado pelo backend
+        socket.on('update_scene', (data) => {
+            const syringe = document.getElementById('syringe');
+            if (syringe && data.position) {
+                // A-Frame usa um formato de string para a posição
+                // O backend envia um array [x, y, z]
+                const newPosition = `${data.position[0]} ${data.position[1]} ${data.position[2]}`;
+                syringe.setAttribute('position', newPosition);
+            }
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Desconectado do servidor backend.');
+        });
+    </script>
 </body>
 
 </html>

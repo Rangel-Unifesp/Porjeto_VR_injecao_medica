@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Broker MQTT para comunicação entre todos os serviços
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883" # Porta padrão do MQTT
+      - "9001:9001" # Porta para WebSockets (se necessário)
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  # Simulação de física SOFA
+  sofa:
+    build:
+      context: ./scr/Simulation
+      dockerfile: Dockerfile.sofa
+    # Garante que o MQTT esteja pronto antes de iniciar o SOFA
+    depends_on:
+      - mqtt
+    # Permite que o SOFA se conecte ao broker usando o nome do serviço 'mqtt'
+    networks:
+      - default
+    # O comando para iniciar a cena principal.
+    # O script 'main_scene.py' precisa existir e ser o ponto de entrada.
+    command: ["runSofa", "-g", "qt", "/app/sofa_scene/main_scene.py"] 

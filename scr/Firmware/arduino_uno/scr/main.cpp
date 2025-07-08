@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <stdint.h> // Para tipos de dados com tamanho fixo
 
 
 const int I2C_SLAVE_ADDRESS = 9;
@@ -17,25 +18,39 @@ const int PIN_ENCODER_B = 3;  // O outro pino de interrupção para determinar a
 
 // --- Variáveis Globais ---
 // 'volatile' é essencial para variáveis modificadas dentro de uma interrupção.
-volatile long encoderCount = 0;
+volatile int32_t encoderCount = 0;
 
 // Estrutura de dados para ENVIAR para o mestre
+// Usar tipos de tamanho fixo garante compatibilidade entre diferentes arquiteturas (ex: Arduino e ESP32)
 struct SensorData {
-  int fsrValue;
-  long encoderValue;
+  int16_t fsrValue;
+  int32_t encoderValue;
+};
+
+// Enum para os estados/direções do motor para maior clareza do código
+enum MotorState {
+  BRAKE = 0,
+  FORWARD = 1,
+  REVERSE = 2
 };
 
 // Variáveis para RECEBER comandos do mestre
 byte motorSpeed = 0;
-byte motorDirection = 0; // 0 = Freio, 1 = Frente, 2 = Ré
+MotorState motorDirection = BRAKE;
 
 
 // Chamada quando o Mestre (ESP32) ENVIA dados para este Escravo.
 // Usada para receber comandos de controle do motor.
 void receiveEvent(int howMany) {
-  if (Wire.available() >= 2) {
-    motorDirection = Wire.read(); // Primeiro byte é a direção
-    motorSpeed = Wire.read();     // Segundo byte é a velocidade
+  // Lê os comandos apenas se o número esperado de bytes foi recebido
+  if (howMany >= 2) {
+    motorDirection = (MotorState)Wire.read(); // Primeiro byte é a direção
+    motorSpeed = Wire.read();                 // Segundo byte é a velocidade
+  }
+
+  // Limpa o buffer de recepção para descartar quaisquer bytes extras e evitar erros
+  while (Wire.available() > 0) {
+    Wire.read();
   }
 }
 
@@ -71,18 +86,23 @@ void updateEncoder() {
 
 // --- Função para controlar o motor ---
 void setMotor() {
-  if (motorDirection == 1) { // Frente
-    digitalWrite(PIN_MOTOR_IN1, HIGH);
-    digitalWrite(PIN_MOTOR_IN2, LOW);
-    analogWrite(PIN_MOTOR_ENA, motorSpeed);
-  } else if (motorDirection == 2) { // Ré
-    digitalWrite(PIN_MOTOR_IN1, LOW);
-    digitalWrite(PIN_MOTOR_IN2, HIGH);
-    analogWrite(PIN_MOTOR_ENA, motorSpeed);
-  } else { // Freio (ou Parado)
-    digitalWrite(PIN_MOTOR_IN1, LOW);
-    digitalWrite(PIN_MOTOR_IN2, LOW);
-    analogWrite(PIN_MOTOR_ENA, 0);
+  switch (motorDirection) {
+    case FORWARD: // Frente
+      digitalWrite(PIN_MOTOR_IN1, HIGH);
+      digitalWrite(PIN_MOTOR_IN2, LOW);
+      analogWrite(PIN_MOTOR_ENA, motorSpeed);
+      break;
+    case REVERSE: // Ré
+      digitalWrite(PIN_MOTOR_IN1, LOW);
+      digitalWrite(PIN_MOTOR_IN2, HIGH);
+      analogWrite(PIN_MOTOR_ENA, motorSpeed);
+      break;
+    case BRAKE: // Freio (ou Parado)
+    default:
+      digitalWrite(PIN_MOTOR_IN1, LOW);
+      digitalWrite(PIN_MOTOR_IN2, LOW);
+      analogWrite(PIN_MOTOR_ENA, 0);
+      break;
   }
 }
 

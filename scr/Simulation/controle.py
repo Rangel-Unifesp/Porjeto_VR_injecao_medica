@@ -3,101 +3,113 @@ import json
 import time
 import threading
 
-
+# --- Configurações MQTT ---
 MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 
+# --- Tópicos para comunicação ---
+# Tópicos do Simulador SOFA
+TOPIC_SOFA_COMMANDS = "simulador/sofa/comandos"  # Para enviar comandos para o SOFA
+TOPIC_SOFA_RESULTS = "simulador/sofa/resultados"    # Para receber resultados do SOFA
 
-TOPIC_SOFA_COMMANDS = "simulador/sofa/comandos"
+# Tópicos do Dispositivo Háptico (ESP32)
+TOPIC_HAPTIC_COMMANDS = "simulador/haptico/comandos" # Para enviar comandos para o motor
+TOPIC_HAPTIC_DATA = "simulador/haptico/dados"        # Para receber dados dos sensores
 
-TOPIC_SOFA_RESULTS = "simulador/sofa/resultados"
+# --- Variáveis Globais para armazenar o último estado conhecido ---
+last_haptic_data = {"encoder": 0, "fsr": 0}
+last_sofa_results = {"force_feedback": [0, 0, 0], "needle_tip_position": [0, 0, 0]}
+data_lock = threading.Lock()
+connection_event = threading.Event()
 
-last_force_feedback = [0, 0, 0]
-last_needle_position = [0, 0, 0]
-connected = threading.Event() 
+# --- Mapeamento e Calibração ---
+# Estes valores precisam ser calibrados para corresponder o movimento físico com o virtual
+ENCODER_TO_MM_SCALE = 0.01  # Ex: 100 pulsos do encoder = 1mm de movimento
+INITIAL_Y_POSITION_MM = 50.0 # Posição inicial da agulha no simulador
 
+# --- Funções de Callback MQTT ---
 def on_connect(client, userdata, flags, rc):
-    """Callback para quando nos conectamos ao broker."""
     if rc == 0:
-        print("[Controle] Conectado ao MQTT Broker com sucesso!")
-        client.subscribe(TOPIC_SOFA_RESULTS)
-        print(f"[Controle] Inscrito no tópico de resultados: {TOPIC_SOFA_RESULTS}")
-        connected.set() 
+        print("[MQTT] Conectado ao Broker!")
+        client.subscribe([(TOPIC_SOFA_RESULTS, 0), (TOPIC_HAPTIC_DATA, 0)])
+        print(f"[MQTT] Inscrito em: {TOPIC_SOFA_RESULTS} e {TOPIC_HAPTIC_DATA}")
+        connection_event.set()
     else:
-        print(f"[Controle] Falha ao conectar, código de retorno: {rc}")
-        connected.clear()
+        print(f"[MQTT] Falha na conexão, código: {rc}")
 
 def on_message(client, userdata, msg):
-    """Callback para quando recebemos uma mensagem do broker."""
-    global last_force_feedback, last_needle_position
+    """Atualiza as variáveis globais com os dados mais recentes recebidos."""
+    global last_haptic_data, last_sofa_results
     try:
-        data = json.loads(msg.payload.decode())
-        if "force_feedback" in data and "needle_tip_position" in data:
-            last_force_feedback = data["force_feedback"]
-            last_needle_position = data["needle_tip_position"]
-            ff_x = f"{last_force_feedback[0]:.2f}".rjust(8)
-            ff_y = f"{last_force_feedback[1]:.2f}".rjust(8)
-            ff_z = f"{last_force_feedback[2]:.2f}".rjust(8)
-            pos_y = f"{last_needle_position[1]:.2f}".rjust(6)
-            print(f"Posição da Ponta (Y): {pos_y} mm | Força (X, Y, Z): [{ff_x}, {ff_y}, {ff_z}] N\r", end="")
-
+        payload = json.loads(msg.payload.decode())
+        with data_lock:
+            if msg.topic == TOPIC_HAPTIC_DATA:
+                last_haptic_data.update(payload)
+            elif msg.topic == TOPIC_SOFA_RESULTS:
+                last_sofa_results.update(payload)
     except (json.JSONDecodeError, KeyError):
         pass
 
-def publish_needle_position(client, y_pos):
+# --- Funções de Controle ---
+def control_loop(client):
+    """Loop principal que executa a lógica de controle."""
+    print("[Controlador] Loop de controle iniciado. Pressione Ctrl+C para sair.")
     
-    new_position = [0, 60, 0,  
-                    0, float(y_pos), 0] 
-    
-    payload = {
-        "command": "move_needle",
-        "value": new_position
-    }
-    
-    client.publish(TOPIC_SOFA_COMMANDS, json.dumps(payload))
-    print("\n[Controle] Comando 'move_needle' enviado.")
+    # Define a posição inicial da agulha no SOFA
+    initial_payload = {"command": "move_needle", "value": [0, INITIAL_Y_POSITION_MM, 0, 0, 0, 0]}
+    client.publish(TOPIC_SOFA_COMMANDS, json.dumps(initial_payload))
 
+    while True:
+        with data_lock:
+            current_encoder = last_haptic_data["encoder"]
+            force_feedback_y = last_sofa_results["force_feedback"][1] # Usamos a força no eixo Y
 
+        # 1. Mover a agulha na simulação com base no encoder
+        new_needle_y = INITIAL_Y_POSITION_MM + (current_encoder * ENCODER_TO_MM_SCALE)
+        move_payload = {"command": "move_needle", "value": [0, new_needle_y, 0, 0, 0, 0]}
+        client.publish(TOPIC_SOFA_COMMANDS, json.dumps(move_payload))
+
+        # 2. Aplicar força no motor com base no feedback da simulação
+        motor_direction = 0  # 0: BRAKE
+        motor_speed = 0
+
+        # Se a força de resistência (negativa) for significativa, ligue o motor para "empurrar de volta"
+        if force_feedback_y < -0.1: # Limiar de força para ativar o motor
+            motor_direction = 2  # 2: REVERSE (puxando contra o usuário)
+            # Mapeia a força para a velocidade do motor (0-255)
+            motor_speed = min(int(abs(force_feedback_y) * 500), 255) # Fator de escala da força
+        
+        force_payload = {"direction": motor_direction, "speed": motor_speed}
+        client.publish(TOPIC_HAPTIC_COMMANDS, json.dumps(force_payload))
+        
+        # Imprime o estado atual
+        print(f"Encoder: {current_encoder:6d} -> Pos Y: {new_needle_y:5.2f} mm | Força Y: {force_feedback_y:6.3f} N -> Motor Velo: {motor_speed:3d}\r", end="")
+
+        time.sleep(0.05) # Frequência do loop de controle (20 Hz)
+
+# --- Função Principal ---
 if __name__ == "__main__":
-    
-    client = mqtt.Client("control_client")
+    client = mqtt.Client("haptic_controller_py")
     client.on_connect = on_connect
     client.on_message = on_message
 
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
 
-    print("[Controle] Aguardando conexão com o broker...")
-    connected.wait(timeout=5) 
+    print("[Main] Aguardando conexão MQTT...")
+    connection_event.wait(timeout=10)
 
-    if not connected.is_set():
-        print("[Controle] Não foi possível conectar ao broker. Encerrando.")
-        client.loop_stop()
-        exit()
+    if not connection_event.is_set():
+        print("[Main] Não foi possível conectar ao broker. Encerrando.")
+    else:
+        try:
+            control_loop(client)
+        except KeyboardInterrupt:
+            print("\n[Main] Encerrando por solicitação do usuário.")
+        finally:
+            # Para o motor ao sair
+            client.publish(TOPIC_HAPTIC_COMMANDS, json.dumps({"direction": 0, "speed": 0}))
 
-    print("\n--- Controle Remoto do Simulador ---")
-    print("Mova a ponta da agulha no eixo Y.")
-    print("Digite um valor numérico (ex: 45.5) e pressione Enter.")
-    print("Digite 'sair' para encerrar.")
-    print("-" * 35)
-
-    try:
-        
-        publish_needle_position(client, 50)
-        
-        while True:
-            command = input("\nNova posição Y para a ponta da agulha: ")
-            if command.lower() == 'sair':
-                break
-            try:
-                y_position = float(command)
-                publish_needle_position(client, y_position)
-            except ValueError:
-                print("[Controle] Erro: Por favor, insira um valor numérico válido.")
-
-    except KeyboardInterrupt:
-        print("\n[Controle] Encerrando por solicitação do usuário.")
-    finally:
-        client.loop_stop()
-        client.disconnect()
-        print("[Controle] Desconectado e encerrado.")
+    client.loop_stop()
+    client.disconnect()
+    print("[Main] Desconectado.")
