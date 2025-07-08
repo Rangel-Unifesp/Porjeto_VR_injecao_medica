@@ -2,6 +2,7 @@
 #include <PubSubClient.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
+#include <stdint.h> // Para tipos de dados com tamanho fixo
 
 // --- Configurações de Rede e MQTT ---
 const char* SSID = "NOME_DA_SUA_REDE_WIFI";
@@ -19,9 +20,17 @@ const int ARDUINO_SLAVE_ADDRESS = 9;
 
 // Estrutura de dados para RECEBER do escravo.
 // DEVE SER IDÊNTICA à definida no código do Arduino.
+// Usar tipos de tamanho fixo garante compatibilidade entre diferentes arquiteturas.
 struct SensorData {
-  int fsrValue;
-  long encoderValue;
+  int16_t fsrValue;
+  int32_t encoderValue;
+};
+
+// Enum para os estados/direções do motor para maior clareza do código
+enum MotorState {
+  BRAKE = 0,
+  FORWARD = 1,
+  REVERSE = 2
 };
 
 // --- Clientes de Rede ---
@@ -56,7 +65,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Extrai os valores do JSON recebido
   // Exemplo de JSON esperado: {"direction": 1, "speed": 200}
-  byte direction = doc["direction"]; // 0=parado, 1=frente, 2=ré
+  byte direction = doc["direction"]; // Usa os valores do enum: 0, 1, ou 2
   byte speed = doc["speed"];         // 0-255
 
   // Envia o comando para o Arduino

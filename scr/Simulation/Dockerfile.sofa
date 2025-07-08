@@ -2,11 +2,10 @@ FROM sofaframework/sofa:v24.06
 
 WORKDIR /app
 
-RUN python3 -m pip install paho-mqtt
+# Install Python dependencies required by the SOFA scene
+# Add any required pip packages here
+RUN pip install paho-mqtt
 
-COPY injecao.py .
-COPY sofa_bridge.py .
-COPY mesh/ ./mesh/
-
-CMD ["runSofa", "-l", "SofaPython3", "-g", "batch", "sofa_bridge.py"]
+# Command to run the simulation scene
+CMD ["runSofa", "-g", "qt", "/sofa/scene/main_scene.py"]
 
