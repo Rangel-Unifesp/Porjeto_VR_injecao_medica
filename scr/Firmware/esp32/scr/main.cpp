@@ -12,8 +12,8 @@ const char* MQTT_BROKER = "192.168.1.10";
 const int   MQTT_PORT = 1883;
 
 // --- Tópicos MQTT ---
-const char* MQTT_DATA_TOPIC = "simulador/haptico/dados";    // Para PUBLICAR dados dos sensores
-const char* MQTT_COMMAND_TOPIC = "simulador/haptico/comandos"; // Para OUVIR comandos de força
+const char* MQTT_DATA_TOPIC = "simulador/esp32/dados";    // Para PUBLICAR dados dos sensores
+const char* MQTT_COMMAND_TOPIC = "simulador/esp32/comandos"; // Para OUVIR comandos de força
 
 // --- Configurações I2C ---
 const int ARDUINO_SLAVE_ADDRESS = 9;
